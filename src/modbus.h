@@ -60,18 +60,22 @@ MODBUS_BEGIN_DECLS
 #endif
 
 /* Modbus function codes */
-#define MODBUS_FC_READ_COILS               0x01
-#define MODBUS_FC_READ_DISCRETE_INPUTS     0x02
-#define MODBUS_FC_READ_HOLDING_REGISTERS   0x03
-#define MODBUS_FC_READ_INPUT_REGISTERS     0x04
-#define MODBUS_FC_WRITE_SINGLE_COIL        0x05
-#define MODBUS_FC_WRITE_SINGLE_REGISTER    0x06
-#define MODBUS_FC_READ_EXCEPTION_STATUS    0x07
-#define MODBUS_FC_WRITE_MULTIPLE_COILS     0x0F
-#define MODBUS_FC_WRITE_MULTIPLE_REGISTERS 0x10
-#define MODBUS_FC_REPORT_SLAVE_ID          0x11
-#define MODBUS_FC_MASK_WRITE_REGISTER      0x16
-#define MODBUS_FC_WRITE_AND_READ_REGISTERS 0x17
+#define MODBUS_FC_READ_COILS                0x01
+#define MODBUS_FC_READ_DISCRETE_INPUTS      0x02
+#define MODBUS_FC_READ_HOLDING_REGISTERS    0x03
+#define MODBUS_FC_READ_INPUT_REGISTERS      0x04
+#define MODBUS_FC_WRITE_SINGLE_COIL         0x05
+#define MODBUS_FC_WRITE_SINGLE_REGISTER     0x06
+#define MODBUS_FC_READ_EXCEPTION_STATUS     0x07
+#define MODBUS_FC_WRITE_MULTIPLE_COILS      0x0F
+#define MODBUS_FC_WRITE_MULTIPLE_REGISTERS  0x10
+#define MODBUS_FC_REPORT_SLAVE_ID           0x11
+#define MODBUS_FC_MASK_WRITE_REGISTER       0x16
+#define MODBUS_FC_WRITE_AND_READ_REGISTERS  0x17
+#define MODBUS_FC_EIT                       0x2B   /* Encapsulated Interface Transport */
+
+/* EIT sub-function codes */
+#define MODBUS_MEI_READ_DEVICE_ID           0x0E
 
 #define MODBUS_BROADCAST_ADDRESS 0
 
@@ -171,11 +175,27 @@ typedef struct _modbus_mapping_t {
     uint16_t *tab_registers;
 } modbus_mapping_t;
 
+typedef struct _modbus_device_id_response_t {
+    uint8_t conformity_level;
+    uint8_t more_follows;
+    uint8_t next_object_id;
+    uint8_t object_count;
+    uint8_t objects[MODBUS_MAX_PDU_LENGTH - 7];
+} modbus_device_id_response_t;
+
 typedef enum {
     MODBUS_ERROR_RECOVERY_NONE = 0,
     MODBUS_ERROR_RECOVERY_LINK = (1 << 1),
     MODBUS_ERROR_RECOVERY_PROTOCOL = (1 << 2)
 } modbus_error_recovery_mode;
+
+typedef enum
+{
+    MODBUS_READ_DEVICE_ID_BASIC    = 0x01,
+    MODBUS_READ_DEVICE_ID_REGULAR  = 0x02,
+    MODBUS_READ_DEVICE_ID_EXTENDED = 0x03,
+    MODBUS_READ_DEVICE_ID_SPECIFIC = 0x04
+} modbus_read_device_id_code;
 
 typedef enum {
     MODBUS_QUIRK_NONE = 0,
@@ -237,6 +257,7 @@ MODBUS_API int modbus_write_and_read_registers(modbus_t *ctx,
                                                int read_nb,
                                                uint16_t *dest);
 MODBUS_API int modbus_report_slave_id(modbus_t *ctx, int max_dest, uint8_t *dest);
+MODBUS_API int modbus_read_device_id(modbus_t *ctx, modbus_read_device_id_code id_code, int obj_id, modbus_device_id_response_t *dest);
 
 MODBUS_API modbus_mapping_t *
 modbus_mapping_new_start_address(unsigned int start_bits,

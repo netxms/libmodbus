@@ -1302,7 +1302,7 @@ int modbus_read_input_bits(modbus_t *ctx, int addr, int nb, uint8_t *dest)
 }
 
 /* Reads the data from a remote device and put that data into an array */
-static int read_registers(modbus_t *ctx, int function, int addr, int nb, uint16_t *dest)
+static int read_registers(modbus_t *ctx, int function, int addr, int nb, uint16_t *dest, int swapBytes)
 {
     int rc;
     int req_length;
@@ -1337,9 +1337,13 @@ static int read_registers(modbus_t *ctx, int function, int addr, int nb, uint16_
 
         offset = ctx->backend->header_length;
 
-        for (i = 0; i < rc; i++) {
-            /* shift reg hi_byte to temp OR with lo_byte */
-            dest[i] = (rsp[offset + 2 + (i << 1)] << 8) | rsp[offset + 3 + (i << 1)];
+        if (swapBytes) {
+            for (i = 0; i < rc; i++) {
+                /* shift reg hi_byte to temp OR with lo_byte */
+                dest[i] = (rsp[offset + 2 + (i << 1)] << 8) | rsp[offset + 3 + (i << 1)];
+            }
+        } else {
+            memcpy(dest, &rsp[offset + 2], rc * 2);
         }
     }
 
@@ -1368,7 +1372,7 @@ int modbus_read_registers(modbus_t *ctx, int addr, int nb, uint16_t *dest)
         return -1;
     }
 
-    status = read_registers(ctx, MODBUS_FC_READ_HOLDING_REGISTERS, addr, nb, dest);
+    status = read_registers(ctx, MODBUS_FC_READ_HOLDING_REGISTERS, addr, nb, dest, TRUE);
     return status;
 }
 
@@ -1391,8 +1395,62 @@ int modbus_read_input_registers(modbus_t *ctx, int addr, int nb, uint16_t *dest)
         return -1;
     }
 
-    status = read_registers(ctx, MODBUS_FC_READ_INPUT_REGISTERS, addr, nb, dest);
+    status = read_registers(ctx, MODBUS_FC_READ_INPUT_REGISTERS, addr, nb, dest, TRUE);
 
+    return status;
+}
+
+/* Reads the holding registers of remote device and interpret returned data as C string */
+int modbus_read_registers_as_string(modbus_t *ctx, int addr, int nb, char *dest)
+{
+    int status;
+
+    if (ctx == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (nb > MODBUS_MAX_READ_REGISTERS) {
+        if (ctx->debug) {
+            fprintf(stderr,
+                    "ERROR Too many registers requested (%d > %d)\n",
+                    nb,
+                    MODBUS_MAX_READ_REGISTERS);
+        }
+        errno = EMBMDATA;
+        return -1;
+    }
+
+    status = read_registers(ctx, MODBUS_FC_READ_HOLDING_REGISTERS, addr, nb, (uint16_t*)dest, FALSE);
+    if (status >= 0)
+        dest[status * 2] = 0;
+    return status;
+}
+
+/* Reads the holding registers of remote device and interpret returned data as C string */
+int modbus_read_input_registers_as_string(modbus_t *ctx, int addr, int nb, char *dest)
+{
+    int status;
+
+    if (ctx == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (nb > MODBUS_MAX_READ_REGISTERS) {
+        if (ctx->debug) {
+            fprintf(stderr,
+                    "ERROR Too many registers requested (%d > %d)\n",
+                    nb,
+                    MODBUS_MAX_READ_REGISTERS);
+        }
+        errno = EMBMDATA;
+        return -1;
+    }
+
+    status = read_registers(ctx, MODBUS_FC_READ_INPUT_REGISTERS, addr, nb, (uint16_t*)dest, FALSE);
+    if (status >= 0)
+        dest[status * 2] = 0;
     return status;
 }
 

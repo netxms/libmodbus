@@ -297,7 +297,7 @@ static uint8_t compute_meta_length_after_function(int function, msg_type_t msg_t
             length = 6;
             break;
         case MODBUS_FC_EIT:
-            length = 8;
+            length = 1; // Read MEI
             break;
         default:
             length = 1;
@@ -332,13 +332,8 @@ compute_data_length_after_meta(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
             function == MODBUS_FC_REPORT_SLAVE_ID ||
             function == MODBUS_FC_WRITE_AND_READ_REGISTERS) {
             length = msg[ctx->backend->header_length + 1];
-        } else if (function == MODBUS_FC_EIT) {
-            length = msg[ctx->backend->header_length + 8];
-
-            /* Include the ID and length of the following object */
-            if(msg[ctx->backend->header_length + 6] > 1) {
-                length += 2;
-            }
+        } else if ((function == MODBUS_FC_EIT) && (msg[ctx->backend->header_length + 1] == MODBUS_MEI_READ_DEVICE_ID)) {
+            length = 5;
         } else {
             length = 0;
         }
@@ -371,7 +366,8 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
     int msg_length = 0;
     _step_t step;
     int function = 0;
-    int stream_objects = 0;
+    int mei = 0;
+    int stream_objects = -1;
 #ifdef _WIN32
     int wsa_err;
 #endif
@@ -449,6 +445,10 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
             return -1;
         }
 
+       if (ctx->debug) {
+         printf("select: rc=%d, msg_length=%d, length_to_read=%d\n", rc, msg_length, length_to_read);
+       }
+
         rc = ctx->backend->recv(ctx, msg + msg_length, length_to_read);
         if (rc == 0) {
             errno = ECONNRESET;
@@ -484,9 +484,10 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
 
         /* Display the hex code of each character received */
         if (ctx->debug) {
-            int i;
-            for (i = 0; i < rc; i++)
-                printf("<%.2X>", msg[msg_length + i]);
+            printf("BYTES(%d): ", rc);
+            for (int i = 0; i < rc; i++)
+                printf("%.2X ", msg[msg_length + i]);
+            printf("\n");
         }
 
         /* Sums bytes received */
@@ -499,8 +500,7 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
             case _STEP_FUNCTION:
                 /* Function code position */
                 function = msg[ctx->backend->header_length];
-                length_to_read = compute_meta_length_after_function(
-                    msg[ctx->backend->header_length], msg_type);
+                length_to_read = compute_meta_length_after_function(function, msg_type);
                 if (length_to_read != 0) {
                     step = _STEP_META;
                     break;
@@ -513,14 +513,26 @@ int _modbus_receive_msg(modbus_t *ctx, uint8_t *msg, msg_type_t msg_type)
                     return -1;
                 }
                 if (function == MODBUS_FC_EIT) {
-                    stream_objects = msg[ctx->backend->header_length + 6];
+                    mei = msg[ctx->backend->header_length + 1];
+                }
+                else if ((function == (MODBUS_FC_EIT | 0x80)) && (msg[ctx->backend->header_length + 1] == MODBUS_MEI_READ_DEVICE_ID)) {
+                    // some devices report exception incorrectly, sending MEI after function code
+                    length_to_read = 1;
                 }
                 step = _STEP_DATA;
                 break;
             case _STEP_DATA:
-                if (function == MODBUS_FC_EIT && stream_objects > 1) {
-                    length_to_read = msg[msg_length - 1] + 2;
-                    stream_objects--;
+                if ((function == MODBUS_FC_EIT) && (mei == MODBUS_MEI_READ_DEVICE_ID)) {
+                    if (stream_objects == -1) {
+                       stream_objects = msg[ctx->backend->header_length + 6];
+                       length_to_read = (stream_objects > 0) ? 2 : 0;
+                    } else if (stream_objects > 0) {
+                       stream_objects--;
+                       length_to_read = msg[msg_length - 1];
+                       if (stream_objects > 0) {
+                           length_to_read += 2; // include header of next object
+                       }
+                    }
                 }
                 break;
             default:
@@ -598,11 +610,15 @@ static int check_confirmation(modbus_t *ctx, uint8_t *req, uint8_t *rsp, int rsp
 
     /* Exception code */
     if (function >= 0x80) {
-        if (rsp_length == (int) (offset + 2 + ctx->backend->checksum_length) &&
+        if (rsp_length >= (int) (offset + 2 + ctx->backend->checksum_length) &&
             req[offset] == (rsp[offset] - 0x80)) {
             /* Valid exception code received */
 
             int exception_code = rsp[offset + 1];
+            if ((function == (MODBUS_FC_EIT | 0x80)) && (exception_code == MODBUS_MEI_READ_DEVICE_ID)) {
+               // some devices incorrectly report exception for EIT/read device ID by sending MEI after function code and only then exception code
+               exception_code = rsp[offset + 2];
+            }
             if (exception_code < MODBUS_EXCEPTION_MAX) {
                 errno = MODBUS_ENOBASE + exception_code;
             } else {
@@ -1837,9 +1853,9 @@ int modbus_read_device_id(modbus_t *ctx, modbus_read_device_id_code id_code, int
             dest->objects[data_offset++] = object_length;
 
             /* Object value */
-            for(; object_length > 0; object_length--) {
-                dest->objects[data_offset++] = rsp[offset++];
-            }
+            memcpy(dest->objects + data_offset, rsp + offset, object_length);
+            data_offset += object_length;
+            offset += object_length;
         }
     }
 

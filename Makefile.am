@@ -3,9 +3,9 @@ ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 AM_MAKEFLAGS = --no-print-directory
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = libmodbus.pc
-EXTRA_DIST = libmodbus.pc.in
-CLEANFILES += libmodbus.pc
+pkgconfig_DATA = libnxmodbus.pc
+EXTRA_DIST = libnxmodbus.pc.in
+CLEANFILES += libnxmodbus.pc
 
 dist_doc_DATA = AUTHORS NEWS README.md
 

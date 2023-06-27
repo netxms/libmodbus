@@ -3,8 +3,8 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: modbus
-Description: Modbus library
+Name: nxmodbus
+Description: Modbus library (NetXMS fork)
 Version: @VERSION@
-Libs: -L${libdir} -lmodbus
+Libs: -L${libdir} -lnxmodbus
 Cflags: -I${includedir}/modbus

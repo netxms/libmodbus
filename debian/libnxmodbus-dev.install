@@ -1,0 +1,3 @@
+usr/include/modbus
+usr/lib/*/libnxmodbus.so
+usr/lib/*/pkgconfig/libnxmodbus.pc

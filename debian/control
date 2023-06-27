@@ -1,0 +1,22 @@
+Source: libnxmodbus
+Maintainer: Alex Kirhenshtein <alk@netxms.org>
+Section: libs
+Priority: optional
+Standards-Version: 4.6.1
+Build-Depends: debhelper (>= 13)
+
+Package: libnxmodbus
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: short description
+ Long description goes here.
+
+Package: libnxmodbus-dev
+Architecture: any
+Multi-Arch: same
+Depends: libnxmodbus (= ${binary:Version}), ${misc:Depends}
+Conflicts: libmodbus-dev
+Description: short description
+ Long description goes here.
+

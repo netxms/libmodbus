@@ -1,0 +1,5 @@
+libnxmodbus (3.1.10-1) stable; urgency=medium
+
+  * Initial release.
+
+ -- Alex Kirhenshtein <alk@netxms.org>  Tue, 27 Jun 2023 16:27:33 +0000

@@ -1,6 +1,6 @@
 # A groovy modbus library
 
-![Build Status](https://github.com/stephane/libmodbus/actions/workflows/build.yml/badge.svg)
+![Build Status](https://github.com/netxms/libmodbus/actions/workflows/build.yml/badge.svg)
 
 ## Overview
 
@@ -78,4 +78,17 @@ You can serve the local documentation with:
 ```shell
 pip install mkdocs-material
 mkdocs serve
+```
+
+## Building deb packages
+
+```sh
+git clone https://github.com/netxms/libmodbus
+cd libmodbus
+./autogen.sh && ./configure && make dist
+mv libnxmodbus-3.1.10.tar.gz libnxmodbus_3.1.10.orig.tar.gz
+tar zxf libnxmodbus_3.1.10.orig.tar.gz
+cd libnxmodbus-3.1.10/
+ln -s ../debian
+debuild -uc -us
 ```

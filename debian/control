@@ -20,3 +20,11 @@ Conflicts: libmodbus-dev
 Description: short description
  Long description goes here.
 
+Package: libnxmodbus-dbg
+Architecture: any
+Section: debug
+Priority: optional
+Depends:
+ libnxmodbus (= ${binary:Version})
+Description: debug symbols for libmodbus
+ Long description goes here.

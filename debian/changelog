@@ -1,3 +1,9 @@
+libnxmodbus (3.1.10-4) stable; urgency=medium
+
+  * select() changed to poll() to prevent crashing
+
+ -- Alex Kirhenshtein <alk@netxms.org>  Mon, 03 Jul 2023 13:40:55 +0300
+
 libnxmodbus (3.1.10-3) stable; urgency=medium
 
   * Debug symbols added

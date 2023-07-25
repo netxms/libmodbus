@@ -18,9 +18,8 @@ steps:
       image: ghcr.io/alkk/netxms-make-dist:latest
       commands:
           - mkdir -p SOURCES
-          - aclocal
-          - automake --add-missing
-          - autoreconf
+          - ./autogen.sh
+          - ./configure
           - make dist
           - cp libnxmodbus-*.tar.gz SOURCES/
     - name: build
@@ -74,9 +73,9 @@ steps:
     - name: make dist
       image: ghcr.io/alkk/netxms-make-dist:latest
       commands:
-          - aclocal
-          - automake --add-missing
-          - autoreconf
+          - mkdir -p SOURCES
+          - ./autogen.sh
+          - ./configure
           - make dist
           - cp libnxmodbus-*.tar.gz SOURCES/
     - name: build
@@ -136,6 +135,6 @@ depends_on:
 
 ---
 kind: signature
-hmac: 5f79c322c3cbf50281fc2104bc0f8388af56a14a719f4dcfd1672857d50b6f6e
+hmac: 986786e94ee06d182a546c42fb9dadcd9f5d0d17c094798ad834f421812302da
 
 ...

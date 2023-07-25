@@ -1,0 +1,141 @@
+---
+kind: pipeline
+type: docker
+name: build-amd64
+
+platform:
+    arch: amd64
+
+volumes:
+    - name: result
+      temp: {}
+    - name: cache
+      host:
+          path: /cache/builder-rpm
+
+steps:
+    - name: make dist
+      image: ghcr.io/alkk/netxms-make-dist:latest
+      commands:
+          - mkdir -p SOURCES
+          - aclocal
+          - automake --add-missing
+          - autoreconf
+          - make dist
+          - cp libnxmodbus-*.tar.gz SOURCES/
+    - name: build
+      image: ghcr.io/netxms/builder-rpm:latest
+      privileged: true
+      volumes:
+          - name: result
+            path: /result
+          - name: cache
+            path: /var/cache/mock
+      commands:
+          - /build.sh
+          - cp /var/lib/mock/*/result/*.rpm /result/
+    - name: upload
+      image: ghcr.io/alkk/drone-rsync:latest
+      volumes:
+          - name: result
+            path: /result
+      settings:
+          host:
+              from_secret: deploy_target
+          host_fingerprint:
+              from_secret: deploy_host_fingerprint
+          port:
+              from_secret: deploy_port
+          user:
+              from_secret: deploy_user
+          key:
+              from_secret: deploy_key
+          source: /result/*.rpm
+          destination: /staging/rpm
+          delete: true
+          extra: --verbose --chmod=Dg+w,Fg+w
+
+---
+kind: pipeline
+type: docker
+name: build-arm64
+
+platform:
+    arch: arm64
+
+volumes:
+    - name: result
+      temp: {}
+    - name: cache
+      host:
+          path: /cache/builder-rpm
+
+steps:
+    - name: make dist
+      image: ghcr.io/alkk/netxms-make-dist:latest
+      commands:
+          - aclocal
+          - automake --add-missing
+          - autoreconf
+          - make dist
+          - cp libnxmodbus-*.tar.gz SOURCES/
+    - name: build
+      image: ghcr.io/netxms/builder-rpm:latest
+      privileged: true
+      volumes:
+          - name: result
+            path: /result
+          - name: cache
+            path: /var/cache/mock
+      commands:
+          - /build.sh
+          - cp /var/lib/mock/*/result/*.rpm /result/
+    - name: upload
+      image: ghcr.io/alkk/drone-rsync:latest
+      volumes:
+          - name: result
+            path: /result
+      settings:
+          host:
+              from_secret: deploy_target
+          host_fingerprint:
+              from_secret: deploy_host_fingerprint
+          port:
+              from_secret: deploy_port
+          user:
+              from_secret: deploy_user
+          key:
+              from_secret: deploy_key
+          source: /result/*.rpm
+          destination: /staging/rpm
+          delete: true
+          extra: --verbose --chmod=Dg+w,Fg+w
+
+---
+kind: pipeline
+name: notify
+type: docker
+steps:
+    - name: notify
+      image: appleboy/drone-telegram
+      settings:
+          token:
+              from_secret: telegram_bot_token
+          to:
+              from_secret: telegram_channel_id
+          disable_web_page_preview: true
+
+trigger:
+    status:
+        - success
+        - failure
+
+depends_on:
+    - build-amd64
+    - build-arm64
+
+---
+kind: signature
+hmac: 5f79c322c3cbf50281fc2104bc0f8388af56a14a719f4dcfd1672857d50b6f6e
+
+...

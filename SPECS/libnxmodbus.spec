@@ -2,7 +2,7 @@
 Summary:       Fork of libmodbus
 Name:          libnxmodbus
 Version:       3.1.10
-Release:       4%{?dist}
+Release:       5%{?dist}
 License:       LGPLv2+
 URL:           https://github.com/netxms/libmodbus
 Group:         Applications/System

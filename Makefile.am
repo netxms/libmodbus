@@ -4,7 +4,7 @@ AM_MAKEFLAGS = --no-print-directory
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libnxmodbus.pc
-EXTRA_DIST = libnxmodbus.pc.in
+EXTRA_DIST = libnxmodbus.pc.in debian
 CLEANFILES += libnxmodbus.pc
 
 dist_doc_DATA = AUTHORS NEWS README.md

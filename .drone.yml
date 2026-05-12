@@ -6,15 +6,8 @@ name: build-amd64
 platform:
     arch: amd64
 
-volumes:
-    - name: result
-      temp: {}
-    - name: cache
-      host:
-          path: /cache/builder-rpm
-
 steps:
-    - name: make dist
+    - name: make-dist
       image: ghcr.io/alkk/netxms-make-dist:latest
       commands:
           - mkdir -p SOURCES
@@ -22,22 +15,53 @@ steps:
           - ./configure
           - make dist
           - cp libnxmodbus-*.tar.gz SOURCES/
-    - name: build
-      image: ghcr.io/netxms/builder-rpm:latest
-      privileged: true
-      volumes:
-          - name: result
-            path: /result
-          - name: cache
-            path: /var/cache/mock
+    - name: build-ol8
+      image: ghcr.io/netxms/builder-rpm:epel8
       commands:
-          - /build.sh
-          - cp /var/lib/mock/*/result/*.rpm /result/
+          - dnf builddep -y SPECS/libnxmodbus.spec
+          - mkdir -p BUILD-el8
+          - rpmbuild --define "_topdir $(pwd)" --define "_builddir $(pwd)/BUILD-el8" -ba SPECS/libnxmodbus.spec
+          - rm -rf BUILD-el8
+      depends_on:
+          - make-dist
+    - name: build-ol9
+      image: ghcr.io/netxms/builder-rpm:epel9
+      commands:
+          - dnf builddep -y SPECS/libnxmodbus.spec
+          - mkdir -p BUILD-el9
+          - rpmbuild --define "_topdir $(pwd)" --define "_builddir $(pwd)/BUILD-el9" -ba SPECS/libnxmodbus.spec
+          - rm -rf BUILD-el9
+      depends_on:
+          - make-dist
+    - name: build-ol10
+      image: ghcr.io/netxms/builder-rpm:epel10
+      commands:
+          - dnf builddep -y SPECS/libnxmodbus.spec
+          - mkdir -p BUILD-el10
+          - rpmbuild --define "_topdir $(pwd)" --define "_builddir $(pwd)/BUILD-el10" -ba SPECS/libnxmodbus.spec
+          - rm -rf BUILD-el10
+      depends_on:
+          - make-dist
+    - name: build-fedora43
+      image: ghcr.io/netxms/builder-rpm:fedora43
+      commands:
+          - dnf builddep -y SPECS/libnxmodbus.spec
+          - mkdir -p BUILD-fc43
+          - rpmbuild --define "_topdir $(pwd)" --define "_builddir $(pwd)/BUILD-fc43" -ba SPECS/libnxmodbus.spec
+          - rm -rf BUILD-fc43
+      depends_on:
+          - make-dist
+    - name: build-fedora44
+      image: ghcr.io/netxms/builder-rpm:fedora44
+      commands:
+          - dnf builddep -y SPECS/libnxmodbus.spec
+          - mkdir -p BUILD-fc44
+          - rpmbuild --define "_topdir $(pwd)" --define "_builddir $(pwd)/BUILD-fc44" -ba SPECS/libnxmodbus.spec
+          - rm -rf BUILD-fc44
+      depends_on:
+          - make-dist
     - name: upload
       image: ghcr.io/alkk/drone-rsync:latest
-      volumes:
-          - name: result
-            path: /result
       settings:
           host:
               from_secret: deploy_target
@@ -49,10 +73,16 @@ steps:
               from_secret: deploy_user
           key:
               from_secret: deploy_key
-          source: /result/*.rpm
+          source:
+              - RPMS/x86_64/
           destination: /staging/rpm
-          delete: true
           extra: --verbose --chmod=Dg+w,Fg+w
+      depends_on:
+          - build-ol8
+          - build-ol9
+          - build-ol10
+          - build-fedora43
+          - build-fedora44
 
 ---
 kind: pipeline
@@ -62,15 +92,8 @@ name: build-arm64
 platform:
     arch: arm64
 
-volumes:
-    - name: result
-      temp: {}
-    - name: cache
-      host:
-          path: /cache/builder-rpm
-
 steps:
-    - name: make dist
+    - name: make-dist
       image: ghcr.io/alkk/netxms-make-dist:latest
       commands:
           - mkdir -p SOURCES
@@ -78,22 +101,53 @@ steps:
           - ./configure
           - make dist
           - cp libnxmodbus-*.tar.gz SOURCES/
-    - name: build
-      image: ghcr.io/netxms/builder-rpm:latest
-      privileged: true
-      volumes:
-          - name: result
-            path: /result
-          - name: cache
-            path: /var/cache/mock
+    - name: build-ol8
+      image: ghcr.io/netxms/builder-rpm:epel8
       commands:
-          - /build.sh
-          - cp /var/lib/mock/*/result/*.rpm /result/
+          - dnf builddep -y SPECS/libnxmodbus.spec
+          - mkdir -p BUILD-el8
+          - rpmbuild --define "_topdir $(pwd)" --define "_builddir $(pwd)/BUILD-el8" -ba SPECS/libnxmodbus.spec
+          - rm -rf BUILD-el8
+      depends_on:
+          - make-dist
+    - name: build-ol9
+      image: ghcr.io/netxms/builder-rpm:epel9
+      commands:
+          - dnf builddep -y SPECS/libnxmodbus.spec
+          - mkdir -p BUILD-el9
+          - rpmbuild --define "_topdir $(pwd)" --define "_builddir $(pwd)/BUILD-el9" -ba SPECS/libnxmodbus.spec
+          - rm -rf BUILD-el9
+      depends_on:
+          - make-dist
+    - name: build-ol10
+      image: ghcr.io/netxms/builder-rpm:epel10
+      commands:
+          - dnf builddep -y SPECS/libnxmodbus.spec
+          - mkdir -p BUILD-el10
+          - rpmbuild --define "_topdir $(pwd)" --define "_builddir $(pwd)/BUILD-el10" -ba SPECS/libnxmodbus.spec
+          - rm -rf BUILD-el10
+      depends_on:
+          - make-dist
+    - name: build-fedora43
+      image: ghcr.io/netxms/builder-rpm:fedora43
+      commands:
+          - dnf builddep -y SPECS/libnxmodbus.spec
+          - mkdir -p BUILD-fc43
+          - rpmbuild --define "_topdir $(pwd)" --define "_builddir $(pwd)/BUILD-fc43" -ba SPECS/libnxmodbus.spec
+          - rm -rf BUILD-fc43
+      depends_on:
+          - make-dist
+    - name: build-fedora44
+      image: ghcr.io/netxms/builder-rpm:fedora44
+      commands:
+          - dnf builddep -y SPECS/libnxmodbus.spec
+          - mkdir -p BUILD-fc44
+          - rpmbuild --define "_topdir $(pwd)" --define "_builddir $(pwd)/BUILD-fc44" -ba SPECS/libnxmodbus.spec
+          - rm -rf BUILD-fc44
+      depends_on:
+          - make-dist
     - name: upload
       image: ghcr.io/alkk/drone-rsync:latest
-      volumes:
-          - name: result
-            path: /result
       settings:
           host:
               from_secret: deploy_target
@@ -105,10 +159,16 @@ steps:
               from_secret: deploy_user
           key:
               from_secret: deploy_key
-          source: /result/*.rpm
+          source:
+              - RPMS/aarch64/
           destination: /staging/rpm
-          delete: true
           extra: --verbose --chmod=Dg+w,Fg+w
+      depends_on:
+          - build-ol8
+          - build-ol9
+          - build-ol10
+          - build-fedora43
+          - build-fedora44
 
 ---
 kind: pipeline
@@ -135,6 +195,6 @@ depends_on:
 
 ---
 kind: signature
-hmac: 986786e94ee06d182a546c42fb9dadcd9f5d0d17c094798ad834f421812302da
+hmac: 60bb7a6fe2e5c615d4be0a9eb4e2928c21b19dec1245c08239846370cef99d7b
 
 ...
